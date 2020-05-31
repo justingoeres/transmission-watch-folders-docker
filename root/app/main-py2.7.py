@@ -7,24 +7,24 @@ import transmissionrpc
 import datetime
 
 # Watch directories
-watch_tv = ''
-watch_movie = ''
-watch_music = ''
+watch_tv = os.environ['RPC_WATCH_TV_FOLDER']
+watch_movie = os.environ['RPC_WATCH_MOVIES_FOLDER']
+watch_music = os.environ['RPC_WATCH_TV_FOLDER']
 
 # Complete download directories
-download_dir_tv = ''
-download_dir_movie = ''
-download_dir_music = ''
+download_dir_tv = os.environ['RPC_DOWNLOAD_TV_FOLDER']
+download_dir_movie = os.environ['RPC_DOWNLOAD_MOVIES_FOLDER']
+download_dir_music = os.environ['RPC_DOWNLOAD_MUSIC_FOLDER']
 
 client = transmissionrpc.Client(
-    address='127.0.0.1',
-    port='9091',
-    user='',
-    password=''
+    address=os.environ['RPC_CLIENT_HOST'],
+    port=os.environ['RPC_CLIENT_PORT'],
+    user=os.environ['RPC_CLIENT_USER'],
+    password=os.environ['RPC_CLIENT_PASSWORD']
     )
 
 # Logging
-log = open('./log.txt', 'a')
+log = open('/var/log/python-rpc-folders.txt', 'a')
 timestamp = '[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())
 print >> log, timestamp +  ' ' + 'Started watch script.'
 print >> log, 'Current watch directories:'
@@ -43,27 +43,29 @@ def add(watch_dir, download_dir):
     if files: # files exist in directory
         for file in files:
             if file.lower().endswith('.torrent') and not file.lower().startswith('.'):
-                log = open('./log.txt', 'a')
+                log = open('/var/log/python-rpc-folders.txt', 'a')
                 timestamp = '[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())
 
                 try:
                     print >> log, timestamp + ' ' + 'Adding torrent: ' + file
-                    newTorrent = client.add_torrent(watch_dir + '/' + file, download_dir=download_dir)
+                    with open(watch_dir + '/' + file, "rb") as f:
+                        encoded = base64.b64encode(f.read())
+                    newTorrent = client.add_torrent(encoded, download_dir=download_dir)
                     time.sleep(1)
                     newTorrent.start()
                     os.remove(watch_dir + '/' + file)
-                except Exception, e:
+                except Exception as e:
                       print >> log, timestamp + ' ' + 'Error encountered: ' + str(e)
 
                 log.close()
                 time.sleep(1)
 
 while True:
-    log = open('./log.txt', 'a')
+    log = open('/var/log/python-rpc-folders.txt', 'a')
     timestamp = '[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())
     print >> log, timestamp + ' ' + 'Searching directories.'
     add(watch_tv, download_dir_tv)
     add(watch_movie, download_dir_movie)
     add(watch_music, download_dir_music)
     log.close()
-    time.sleep(60)
+    time.sleep(30)
