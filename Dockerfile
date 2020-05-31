@@ -18,7 +18,7 @@ RUN apk update \
     && apk add py-pip \
     && pip install transmissionrpc \
 	&& tar xzf /tmp/s6overlay.tar.gz -C / \
-    && rm /tmp/s6overlay.tar.gz
+    && rm /tmp/s6overlay.tar.gz \
     && rm -rf /var/lib/apt/lists/* 
 ADD root/ /
 
