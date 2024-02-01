@@ -1,6 +1,7 @@
 #!/usr/bin/with-contenv sh
 echo $RPC_WATCH_TV_FOLDER
-mkdir -p $RPC_WATCH_MUSIC_FOLDER
 
 mkdir -p $RPC_WATCH_TV_FOLDER
 mkdir -p $RPC_WATCH_MOVIES_FOLDER
+mkdir -p $RPC_WATCH_VR_FOLDER
+mkdir -p $RPC_WATCH_OTHER_FOLDER

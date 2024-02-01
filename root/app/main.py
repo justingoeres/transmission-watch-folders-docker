@@ -10,12 +10,14 @@ import base64
 # Watch directories
 watch_tv = os.environ['RPC_WATCH_TV_FOLDER']
 watch_movie = os.environ['RPC_WATCH_MOVIES_FOLDER']
-watch_music = os.environ['RPC_WATCH_MUSIC_FOLDER']
+watch_vr = os.environ['RPC_WATCH_VR_FOLDER']
+watch_other = os.environ['RPC_WATCH_OTHER_FOLDER']
 
 # Complete download directories
 download_dir_tv = os.environ['RPC_DOWNLOAD_TV_FOLDER']
 download_dir_movie = os.environ['RPC_DOWNLOAD_MOVIES_FOLDER']
-download_dir_music = os.environ['RPC_DOWNLOAD_MUSIC_FOLDER']
+download_dir_vr = os.environ['RPC_DOWNLOAD_VR_FOLDER']
+download_dir_other = os.environ['RPC_DOWNLOAD_OTHER_FOLDER']
  
 client = transmissionrpc.Client(
     address=os.environ['RPC_CLIENT_HOST'],
@@ -31,11 +33,13 @@ print(timestamp +  ' ' + 'Started watch script.', file=log)
 print('Current watch directories:', file=log)
 print('    TV: ' + watch_tv, file=log)
 print('Movies: ' + watch_movie, file=log)
-print(' Music: ' + watch_music, file=log)
+print(' VR: ' + watch_vr, file=log)
+print(' Other: ' + watch_other, file=log)
 print('Current download directories:', file=log)
 print('    TV: ' + download_dir_tv, file=log)
 print('Movies: ' + download_dir_movie, file=log)
-print(' Music: ' + download_dir_music, file=log)
+print(' VR: ' + download_dir_vr, file=log)
+print(' Other: ' + download_dir_other, file=log)
 log.close()
 
 
@@ -80,6 +84,7 @@ while True:
     print(timestamp + ' ' + 'Searching directories.', file=log)
     add(watch_tv, download_dir_tv)
     add(watch_movie, download_dir_movie)
-    add(watch_music, download_dir_music)
+    add(watch_vr, download_dir_vr)
+    add(watch_other, download_dir_other)
     log.close()
     time.sleep(30)
