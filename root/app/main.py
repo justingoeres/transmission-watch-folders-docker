@@ -6,6 +6,11 @@ import os.path as path
 import transmissionrpc
 import datetime
 import base64
+try:
+    from urllib2 import Request, urlopen
+except ImportError:
+    from urllib.request import Request, urlopen
+import json
 
 # Watch directories
 watch_tv = os.environ['RPC_WATCH_TV_FOLDER']
@@ -18,13 +23,53 @@ download_dir_tv = os.environ['RPC_DOWNLOAD_TV_FOLDER']
 download_dir_movie = os.environ['RPC_DOWNLOAD_MOVIES_FOLDER']
 download_dir_vr = os.environ['RPC_DOWNLOAD_VR_FOLDER']
 download_dir_other = os.environ['RPC_DOWNLOAD_OTHER_FOLDER']
- 
+
+# Labels per category (optional — set via env vars, empty string = no label)
+label_tv = os.environ.get('RPC_LABEL_TV', '')
+label_movie = os.environ.get('RPC_LABEL_MOVIES', '')
+label_vr = os.environ.get('RPC_LABEL_VR', '')
+label_other = os.environ.get('RPC_LABEL_OTHER', '')
+
+# RPC URL for raw requests (labels not supported by transmissionrpc 0.11)
+rpc_url = 'http://{}:{}/transmission/rpc'.format(
+    os.environ['RPC_CLIENT_HOST'],
+    os.environ['RPC_CLIENT_PORT']
+)
+
 client = transmissionrpc.Client(
     address=os.environ['RPC_CLIENT_HOST'],
     port=os.environ['RPC_CLIENT_PORT'],
     user=os.environ['RPC_CLIENT_USER'],
     password=os.environ['RPC_CLIENT_PASSWORD']
     )
+
+
+def set_label(torrent_hash, label):
+    """Set a label on a torrent via raw Transmission RPC (bypasses old transmissionrpc library)."""
+    if not label:
+        return
+    # Get session ID
+    try:
+        urlopen(Request(rpc_url))
+    except Exception as e:
+        # Transmission returns 409 with session ID header
+        if hasattr(e, 'headers'):
+            session_id = e.headers.get('X-Transmission-Session-Id', '')
+        else:
+            return
+    if not session_id:
+        return
+    body = json.dumps({
+        'method': 'torrent-set',
+        'arguments': {'ids': [torrent_hash], 'labels': [label]}
+    }).encode('utf-8')
+    req = Request(rpc_url, data=body)
+    req.add_header('Content-Type', 'application/json')
+    req.add_header('X-Transmission-Session-Id', session_id)
+    try:
+        urlopen(req)
+    except Exception:
+        pass
 
 # Logging
 log = open('/var/log/python-rpc-folders.txt', 'a')
@@ -54,7 +99,7 @@ def PrintException(logfile):
     print ('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj),file=logfile)
 
 
-def add(watch_dir, download_dir):
+def add(watch_dir, download_dir, label=''):
     for entry in os.scandir(watch_dir):
         if entry.name.lower().endswith('.torrent') and entry.is_file():
             log = open('/var/log/python-rpc-folders.txt', 'a')
@@ -66,25 +111,28 @@ def add(watch_dir, download_dir):
                 newTorrent = client.add_torrent(encoded, download_dir=download_dir)
                 time.sleep(1)
                 newTorrent.start()
+                if label:
+                    set_label(newTorrent.hashString, label)
+                    print(timestamp + ' ' + 'Labeled torrent: ' + label, file=log)
                 os.remove(watch_dir + '/' + entry.name)
             except Exception as e:
                 print(timestamp + ' ' + 'Error encountered for directory ('+ watch_dir + ') : ' + str(e), file=log)
                 PrintException(log)
             log.close()
             time.sleep(1)
-        else: 
+        else:
             log = open('/var/log/python-rpc-folders.txt', 'a')
             timestamp = '[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())
             print(timestamp + ' ' + 'No torrent file found for directory ('+ watch_dir + ') : ' + entry.name, file=log)
-            
+
 
 while True:
     log = open('/var/log/python-rpc-folders.txt', 'a')
     timestamp = '[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())
     print(timestamp + ' ' + 'Searching directories.', file=log)
-    add(watch_tv, download_dir_tv)
-    add(watch_movie, download_dir_movie)
-    add(watch_vr, download_dir_vr)
-    add(watch_other, download_dir_other)
+    add(watch_tv, download_dir_tv, label_tv)
+    add(watch_movie, download_dir_movie, label_movie)
+    add(watch_vr, download_dir_vr, label_vr)
+    add(watch_other, download_dir_other, label_other)
     log.close()
     time.sleep(30)
